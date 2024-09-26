@@ -22,9 +22,14 @@ const generateUserData = (region, errors, seed, page) => {
 
     // Apply errors to data
     if (errors > 0) {
-      name = applyErrors(name, errors);
-      address = applyErrors(address, errors);
-      phone = applyErrors(phone, errors);
+      const errorCount = Math.ceil(errors);
+      for (let j = 0; j < errorCount; j++) {
+        if (Math.random() < errors / errorCount) {
+          name = applyErrors(name, 1);
+          address = applyErrors(address, 1);
+          phone = applyErrors(phone, 1);
+        }
+      }
     }
 
     users.push({
