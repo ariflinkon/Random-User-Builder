@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import UserTable from './components/UserTable';
 import { exportToCSV } from './components/exportToCSV';
+import './App.css'; // Ensure you have the CSS file imported
 
 const App = () => {
   const [region, setRegion] = useState('USA');
@@ -10,69 +11,75 @@ const App = () => {
   const [users, setUsers] = useState([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
 
   const API_URL = process.env.REACT_APP_API_URL;
 
-  // Fetch users data with Axios
-  const fetchUsers = React.useCallback(async () => {
+  const fetchUsers = useCallback(async (append = false) => {
     setLoading(true);
     try {
       const response = await axios.get(`${API_URL}/api/users`, {
         params: { region, errors, seed, page }
       });
-      setUsers(response.data);
+
+      if (response.data.length === 0) {
+        setHasMore(false);
+      } else {
+        setUsers((prevUsers) => (append ? [...prevUsers, ...response.data] : response.data));
+      }
     } catch (error) {
       console.error('Error fetching users:', error);
     }
     setLoading(false);
   }, [region, errors, seed, page, API_URL]);
 
-  // Re-fetch users when any dependency changes
   useEffect(() => {
-    fetchUsers();
+    fetchUsers(page > 1);
   }, [region, errors, seed, page, fetchUsers]);
 
-  // Handle region change
   const handleRegionChange = (e) => {
     setRegion(e.target.value);
     setPage(1);
     setUsers([]);
+    setHasMore(true);
   };
 
-  // Handle errors change
   const handleErrorsChange = (e) => {
-    setErrors(Math.min(e.target.value, 1000)); // Limit errors between 0 and 1000
+    setErrors(Math.min(e.target.value, 1000));
     setPage(1);
     setUsers([]);
+    setHasMore(true);
   };
 
-  // Handle seed change
   const handleSeedChange = (e) => {
     setSeed(e.target.value);
     setPage(1);
     setUsers([]);
+    setHasMore(true);
   };
 
-  // Generate random seed
   const generateRandomSeed = async () => {
     try {
       const response = await axios.get(`${API_URL}/api/generate-seed`);
       setSeed(response.data.seed);
       setPage(1);
       setUsers([]);
+      setHasMore(true);
     } catch (error) {
       console.error('Error generating seed:', error);
     }
   };
 
-  // Infinite scrolling handler
   const handleScroll = (e) => {
-    if (e.target.scrollHeight - e.target.scrollTop === e.target.clientHeight && !loading) {
-      setPage(prevPage => prevPage + 1);
+    if (
+      e.target.scrollHeight - e.target.scrollTop === e.target.clientHeight &&
+      !loading &&
+      hasMore
+    ) {
+      setPage((prevPage) => prevPage + 1);
     }
   };
 
-  // Export users data as CSV
   const handleExport = () => {
     exportToCSV(users, 'users.csv');
   };
@@ -115,6 +122,7 @@ const App = () => {
       </div>
       <UserTable users={users} />
       {loading && <div>Loading...</div>}
+      {!hasMore && <div>No more records to load.</div>}
     </div>
   );
 };

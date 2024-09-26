@@ -36,3 +36,7 @@
     transform: rotate(360deg);
   }
 }
+.app {
+  height: 100vh; 
+  overflow-y: auto;
+}
